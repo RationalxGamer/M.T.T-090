@@ -22,51 +22,51 @@ song_input = st.text_input("Song Title & Artist", placeholder="e.g., Vivir Mi Vi
 # 4. The "Analyze" Button Logic
 if st.button("Analyze Song"):
     if song_input:
-        with st.spinner(f"Scouring music forums for '{song_input}'..."):
+        with st.spinner(f"Thoroughly scouring verified music sources for '{song_input}'..."):
             try:
                 # --- A. The Search Phase (Exa) ---
-                search_query = f"{song_input} chords key bpm measure breakdown site:lacuerda.net OR site:ultimate-guitar.com OR site:songsterr.com"
+                # Strictly searching your 4 requested verified sources
+                search_query = f"{song_input} \"official\" OR \"verified\" chords site:ultimate-guitar.com OR site:lacuerda.net OR site:guitarsongs.club OR site:cifraclub.com"
                 
-                # Note: use_autoprompt removed to fix the Exa API error
                 search_results = exa.search_and_contents(
                     search_query,
                     type="neural",
-                    num_results=3, 
+                    num_results=5, # Deep search across 5 pages
                     text=True
                 )
                 
-                # Combine the raw text from the websites
+                # Combine the raw text, including the URL so the AI knows where it came from
                 context_text = ""
                 for result in search_results.results:
-                    context_text += f"Content: {result.text}\n\n"
+                    context_text += f"Source URL: {result.url}\nContent: {result.text}\n\n"
                     
                 # --- B. The Brain Phase (Groq) ---
-                # Updated Strict Prompt with Accuracy Estimate
                 prompt = f"""
-                You are a professional Musicologist. Extract high-accuracy musical data for '{song_input}' using the provided text.
+                You are a professional Musicologist. Extract high-accuracy musical data for '{song_input}' using ONLY the provided text.
                 
                 STRICT RULES:
-                1. DO NOT GUESS. If BPM or Key isn't found in the text, say "Unknown".
-                2. FAVOR TABLATURE: Look for chord symbols (e.g., Bb, Cm7) placed over lyrics or in grids.
-                3. BILINGUAL SUPPORT: If you see Spanish notes (Do, Re, Mi, Fa, Sol, La, Si), translate them to English (C, D, E, F, G, A, B).
-                4. TABLE FORMAT: Provide the chord progression in a clear Markdown table by section (Intro, Verse, Chorus).
+                1. DO NOT GUESS. If BPM or Key isn't explicitly found, say "Unknown".
+                2. CROSS-REFERENCE: You have data from up to 5 sources. Compare them to find the most accurate chord progression.
+                3. FAVOR TABLATURE: Look for chord symbols placed over lyrics or in structured grids.
+                4. BILINGUAL SUPPORT: Translate Spanish/Portuguese notes (Do, Re, Mi) to English (C, D, E).
+                5. TABLE FORMAT: Provide the chord progression in a clear Markdown table by section (Intro, Verse, Chorus).
                 
                 ACCURACY ESTIMATE:
-                At the very end of your response, provide an "Accuracy Confidence Score" from 0-100%. 
-                - 90%+: Found matching data on multiple sites.
-                - 50-70%: Data found but looks incomplete or formatted poorly.
-                - Below 50%: Highly speculative; data was messy or missing.
-                Explain in one sentence WHY you gave that score.
+                At the end, provide an "Accuracy Confidence Score" from 0-100%. 
+                - 90%+: Found matching, high-quality data across multiple sites.
+                - 50-70%: Data found but there are discrepancies between sites.
+                - Below 50%: Data was messy, missing, or highly speculative.
+                Explain WHY you gave that score, and mention which site provided the best data.
 
                 TEXT TO ANALYZE:
                 {context_text}
                 """
                 
-                # Updated to Groq's latest model
+                # Upgraded to the massive 70B model for deep reasoning
                 chat_completion = groq.chat.completions.create(
                     messages=[{"role": "user", "content": prompt}],
-                    model="llama-3.1-8b-instant",
-                    temperature=0.2, 
+                    model="llama-3.3-70b-versatile",
+                    temperature=0.1, # Highly factual, low creativity
                 )
                 
                 # --- C. Display the Result ---
@@ -75,12 +75,11 @@ if st.button("Analyze Song"):
                 st.markdown(response_content)
 
                 # --- D. Accuracy Visualization ---
-                # This part looks for the % number in the AI's message and makes a visual bar
+                # Looks for the % number in the AI's message and makes a visual bar
                 match = re.search(r"(\d+)%", response_content)
                 if match:
                     score = int(match.group(1))
                     st.write(f"**Tool Confidence Score: {score}%**")
-                    # Streamlit progress bars expect a float between 0.0 and 1.0
                     st.progress(score / 100.0) 
 
             except Exception as e:
