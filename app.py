@@ -8,7 +8,7 @@ st.set_page_config(page_title="Music Breakdown Tool", page_icon="🎵")
 st.title("🎵 Spanish & Universal Music Tool")
 st.write("Enter a song title and artist to get the key, tempo, and measure-by-measure chords.")
 
-# 2. Connect the Keys (Securely pulling from your Streamlit Vault)
+# 2. Connect the Keys 
 try:
     exa = Exa(api_key=st.secrets["EXA_API_KEY"])
     groq = Groq(api_key=st.secrets["GROQ_API_KEY"])
@@ -22,20 +22,31 @@ song_input = st.text_input("Song Title & Artist", placeholder="e.g., Vivir Mi Vi
 # 4. The "Analyze" Button Logic
 if st.button("Analyze Song"):
     if song_input:
-        with st.spinner(f"Thoroughly scouring verified music sources for '{song_input}'..."):
+        with st.spinner(f"Scouring music sources for '{song_input}'..."):
             try:
                 # --- A. The Search Phase (Exa) ---
-                # Strictly searching your 4 requested verified sources
-                search_query = f"{song_input} \"official\" OR \"verified\" chords site:ultimate-guitar.com OR site:lacuerda.net OR site:guitarsongs.club OR site:cifraclub.com"
+                # Dropped confusing keywords. Keeping it strictly to the essentials.
+                search_query = f"{song_input} chords"
                 
+                # PRIORITY SEARCH: Target the 4 specific sites you requested
                 search_results = exa.search_and_contents(
                     search_query,
                     type="neural",
-                    num_results=5, # Deep search across 5 pages
+                    num_results=5,
+                    include_domains=["ultimate-guitar.com", "lacuerda.net", "guitarsongs.club", "cifraclub.com", "cifraclub.com.br"],
                     text=True
                 )
                 
-                # Combine the raw text, including the URL so the AI knows where it came from
+                # FALLBACK SEARCH: If the priority sites have nothing, search anywhere similar
+                if not search_results.results:
+                    search_results = exa.search_and_contents(
+                        search_query,
+                        type="neural",
+                        num_results=5,
+                        text=True
+                    )
+                
+                # Combine the raw text
                 context_text = ""
                 for result in search_results.results:
                     context_text += f"Source URL: {result.url}\nContent: {result.text}\n\n"
@@ -46,27 +57,22 @@ if st.button("Analyze Song"):
                 
                 STRICT RULES:
                 1. DO NOT GUESS. If BPM or Key isn't explicitly found, say "Unknown".
-                2. CROSS-REFERENCE: You have data from up to 5 sources. Compare them to find the most accurate chord progression.
-                3. FAVOR TABLATURE: Look for chord symbols placed over lyrics or in structured grids.
-                4. BILINGUAL SUPPORT: Translate Spanish/Portuguese notes (Do, Re, Mi) to English (C, D, E).
-                5. TABLE FORMAT: Provide the chord progression in a clear Markdown table by section (Intro, Verse, Chorus).
+                2. DOUBLE CHECK: Double check data and cross reference to ensure maximum accuracy.
+                3. BILINGUAL SUPPORT: Translate Spanish/Portuguese notes (Do, Re, Mi) to English (C, D, E).
                 
                 ACCURACY ESTIMATE:
                 At the end, provide an "Accuracy Confidence Score" from 0-100%. 
-                - 90%+: Found matching, high-quality data across multiple sites.
-                - 50-70%: Data found but there are discrepancies between sites.
-                - Below 50%: Data was messy, missing, or highly speculative.
                 Explain WHY you gave that score, and mention which site provided the best data.
 
                 TEXT TO ANALYZE:
                 {context_text}
                 """
                 
-                # Upgraded to the massive 70B model for deep reasoning
+                # Using the heavy-duty model for deep reasoning
                 chat_completion = groq.chat.completions.create(
                     messages=[{"role": "user", "content": prompt}],
                     model="llama-3.3-70b-versatile",
-                    temperature=0.1, # Highly factual, low creativity
+                    temperature=0.1, 
                 )
                 
                 # --- C. Display the Result ---
@@ -75,7 +81,6 @@ if st.button("Analyze Song"):
                 st.markdown(response_content)
 
                 # --- D. Accuracy Visualization ---
-                # Looks for the % number in the AI's message and makes a visual bar
                 match = re.search(r"(\d+)%", response_content)
                 if match:
                     score = int(match.group(1))
