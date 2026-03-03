@@ -9,7 +9,7 @@ st.set_page_config(page_title="Music Breakdown Tool", page_icon="🎵")
 st.title("🎵 Spanish & Universal Music Tool")
 st.write("Enter a song title and artist to get the key, tempo, time signature, and measure-by-measure chords.")
 
-# 2. Connect the Keys (The Assembly Line)
+# 2. Connect the Keys
 try:
     exa = Exa(api_key=st.secrets["EXA_API_KEY"])
     groq = Groq(api_key=st.secrets["GROQ_API_KEY"])
@@ -24,16 +24,14 @@ song_input = st.text_input("Song Title & Artist", placeholder="e.g., Vivir Mi Vi
 # 4. The "Analyze" Button Logic
 if st.button("Analyze Song"):
     if song_input:
-        # Updated spinner text to reflect the new heavy-duty process
-        with st.spinner(f"Searching, Drafting, and Verifying '{song_input}'... (This takes a moment)"):
+        with st.spinner(f"Searching, Drafting, and Verifying '{song_input}'..."):
             try:
                 # --- PHASE 1: The Scout (Exa) ---
                 search_query = f"{song_input} chords"
                 
-                # Expanded Priority List
+                # LaCuerda removed. 
                 priority_domains = [
                     "ultimate-guitar.com", 
-                    "lacuerda.net", 
                     "guitarsongs.club", 
                     "cifraclub.com", 
                     "cifraclub.com.br",
@@ -41,10 +39,11 @@ if st.button("Analyze Song"):
                     "acordesdcanciones.com"
                 ]
                 
+                # Bumping num_results to 10 forces Exa to pull from multiple sites on the list
                 search_results = exa.search_and_contents(
                     search_query,
                     type="neural",
-                    num_results=5,
+                    num_results=10, 
                     include_domains=priority_domains,
                     text=True
                 )
@@ -66,7 +65,6 @@ if st.button("Analyze Song"):
                 groq_prompt = f"""
                 You are a Music Data Extractor. Extract the raw musical data for '{song_input}' from the text below.
                 Find the Key, Tempo (BPM), Time Signature, and map the chords to the song sections.
-                Do not worry about perfect formatting, just get the raw data down accurately.
                 
                 TEXT:
                 {context_text}
@@ -81,7 +79,7 @@ if st.button("Analyze Song"):
                 # --- PHASE 3: The Supervisor (Gemini) ---
                 gemini_prompt = f"""
                 You are the Master Musicologist Supervisor. 
-                Your assistant has drafted a chord breakdown, but you must verify it for flawless accuracy against the raw source text.
+                Your assistant has drafted a chord breakdown for '{song_input}'. You must verify it against the raw source text.
                 
                 RAW SOURCE TEXT:
                 {context_text}
@@ -90,13 +88,16 @@ if st.button("Analyze Song"):
                 {groq_draft}
                 
                 YOUR TASKS:
-                1. VERIFY AND FIX: Cross-reference the draft with the raw text. Fix any hallucinations (especially incorrect generic Latin chord loops).
-                2. FILL IN THE BLANKS: If the draft missed the BPM, Time Signature, or Key, search the raw text deeply to find it. If it truly does not exist in the text, explicitly state "Unknown".
-                3. BILINGUAL SUPPORT: Ensure all Spanish/Portuguese notes (Do, Re, Mi) are translated to English standard (C, D, E).
-                4. FORMAT: Output the final data clearly with these exact headers: **Key:**, **Tempo (BPM):**, **Time Signature:**, and a clean Markdown table for the **Chord Progression** by section.
-                5. CONFIDENCE SCORE: End with an "Accuracy Confidence Score" (0-100%) explaining why you gave that score and which specific URL provided the best data.
+                1. STRICT IDENTITY CHECK: Your absolute priority is the requested song: '{song_input}'. Do not assume, interpret, or "fix" the user's search. If the exact song by the exact artist is not explicitly found in the text, output ONLY: "Error: No accurate data found for this exact song."
+                2. CROSS-REFERENCE MANDATE: You have data from multiple sites. You must actively compare them. Do not rely on just the first source. If sources disagree, favor the one with the most structured tablature.
+                3. NO GUESSWORK: If a specific detail (like BPM or Time Signature) is missing across ALL sources, explicitly state "Unknown". Do not calculate or guess.
+                4. LASER FOCUS: Ignore any sidebars, "related songs", or "top tracks" mentioned in the text.
+                5. BILINGUAL SUPPORT: Translate Spanish/Portuguese notes (Do, Re, Mi) to English standard (C, D, E).
+                6. FORMAT: Output final data with these exact headers: **Key:**, **Tempo (BPM):**, **Time Signature:**, and a clean Markdown table for the **Chord Progression**.
+                7. CONFIDENCE SCORE: End with an "Accuracy Confidence Score" (0-100%) explaining your cross-referencing process and noting if any sources conflicted.
                 """
                 
+                # Using the stable, high-limit Flash model
                 gemini_model = genai.GenerativeModel('gemini-3-flash-preview')
                 final_response = gemini_model.generate_content(gemini_prompt).text
                 
