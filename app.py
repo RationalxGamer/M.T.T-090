@@ -36,7 +36,9 @@ if st.button("Analyze Song"):
                     "cifraclub.com", 
                     "cifraclub.com.br",
                     "acordesweb.com",
-                    "acordesdcanciones.com"
+                    "acordesdcanciones.com",
+                    "songbpm.com",
+                    "tunebat.com"
                 ]
                 
                 # Bumping num_results to 10 forces Exa to pull from multiple sites on the list
