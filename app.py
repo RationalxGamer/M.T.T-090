@@ -29,7 +29,6 @@ if st.button("Analyze Song"):
                 search_results = exa.search_and_contents(
                     search_query,
                     type="neural",
-                    use_autoprompt=True,
                     num_results=3, # Pulls the top 3 best transcriptions
                     text=True
                 )
