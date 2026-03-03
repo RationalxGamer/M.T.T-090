@@ -51,7 +51,7 @@ if st.button("Analyze Song"):
                 
                 chat_completion = groq.chat.completions.create(
                     messages=[{"role": "user", "content": prompt}],
-                    model="llama3-8b-8192", # Groq's blazing fast model
+                    model="llama-3.1-8b-instant", # Groq's blazing fast model
                     temperature=0.2, # Keeps the AI focused and accurate
                 )
                 
