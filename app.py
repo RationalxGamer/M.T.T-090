@@ -97,7 +97,7 @@ if st.button("Analyze Song"):
                 5. CONFIDENCE SCORE: End with an "Accuracy Confidence Score" (0-100%) explaining why you gave that score and which specific URL provided the best data.
                 """
                 
-                gemini_model = genai.GenerativeModel('gemini-3.0-pro-thinking')
+                gemini_model = genai.GenerativeModel('gemini-3.0-pro')
                 final_response = gemini_model.generate_content(gemini_prompt).text
                 
                 # --- Display the Final Verified Result ---
