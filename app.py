@@ -6,7 +6,7 @@ import re
 # 1. Setup the UI
 st.set_page_config(page_title="Music Breakdown Tool", page_icon="🎵")
 st.title("🎵 Spanish & Universal Music Tool")
-st.write("Enter a song title and artist to get the key, tempo, and measure-by-measure chords.")
+st.write("Enter a song title and artist to get the key, tempo, time signature, and measure-by-measure chords.")
 
 # 2. Connect the Keys 
 try:
@@ -25,7 +25,6 @@ if st.button("Analyze Song"):
         with st.spinner(f"Scouring music sources for '{song_input}'..."):
             try:
                 # --- A. The Search Phase (Exa) ---
-                # Dropped confusing keywords. Keeping it strictly to the essentials.
                 search_query = f"{song_input} chords"
                 
                 # PRIORITY SEARCH: Target the 4 specific sites you requested
@@ -55,8 +54,14 @@ if st.button("Analyze Song"):
                 prompt = f"""
                 You are a professional Musicologist. Extract high-accuracy musical data for '{song_input}' using ONLY the provided text.
                 
+                REQUIRED DATA POINTS (Format your output with these exact headers):
+                1. **Key:** 2. **Tempo (BPM):** Look carefully for terms like "tempo", "BPM", "beats per minute", or metronome marks. 
+                3. **Time Signature:** Look for 4/4, 3/4, 6/8, etc. 
+                4. **Song Structure:** List the sections found (e.g., Intro, Verse, Pre-Chorus, Chorus, Bridge).
+                5. **Chord Progression:** Provide a clear Markdown table mapping the chords to each specific section.
+                
                 STRICT RULES:
-                1. DO NOT GUESS. If BPM or Key isn't explicitly found, say "Unknown".
+                1. DO NOT GUESS. If a specific data point (like BPM or Time Signature) isn't explicitly found in the text, say "Unknown".
                 2. DOUBLE CHECK: Double check data and cross reference to ensure maximum accuracy.
                 3. BILINGUAL SUPPORT: Translate Spanish/Portuguese notes (Do, Re, Mi) to English (C, D, E).
                 
